@@ -1,31 +1,78 @@
-const PORT = 8000
+const PORT = 8001
 const express = require('express')
-const cors = require('cors')
 const app = express()
 app.use(express.json())
-app.use(cors())
-
-const API_KEY = ''
+const cors = require('cors')
+const request = require('request');
+app.use(cors());
+require('dotenv').config();
 
 app.post('/completions', async (req,res)=>{
-    const options ={
-        method:"POST",
-        headers:{
-            "Authorization": `Bearer ${API_KEY}`,
-            "Content-Type": "application/json"
-        },
-        body:JSON.stringify({
-            model: "gpt-3.5-turbo",
-            messages: [{"role": "user", "content": req.body.message}],
-            max_tokens: 100,
-        })
+    const KEY = process.env.API_KEY;
+    console.log("into completions pose reques")
+    var proxy = {
+        host: "localhost", //代理服务器地址
+        port: 7890,//端口
     }
-    try {
-        const response =  await fetch('https://api.openai.com/v1/chat/completions', options)
-        const data = await response.json
-        res.send(data)
-    } catch (error) {
-        console.error(error)
+    
+    const headers = {
+        "Authorization": `Bearer ${KEY}`,
+        "Content-Type": "application/json",
+        "Host": "api.openai.com"
     }
-})
+
+    var payload = {
+        model: "gpt-3.5-turbo",
+        'messages': [{"role": "user", "content": req.body.message }],
+        temperature: 0.7
+    }
+    request({
+        url: 'https://api.openai.com/v1/chat/completions',
+        method: 'POST',
+        body: JSON.stringify(payload),
+        proxy: proxy,
+        timeout: 5000,
+        headers: headers,
+        encoding:'utf-8'
+        },(err,response,body) => {
+            if (err){
+                console.error(err.status+err);
+                res.send(err).status(500)
+            }
+            console.log(body)
+            res.send(body).status(200)
+        })   
+
+});
+
+
+
+app.post('/model', async (req,res)=>{
+
+    console.log("into model with message " + req.body.message)
+    var proxy = {
+        host: "localhost", //代理服务器地址
+        port: 7890,//端口
+    }
+    
+    const headers = {
+        "Authorization": `Bearer ${API_KEY}`,
+        "Host": "api.openai.com"
+    }
+
+    request({
+        url: 'https://api.openai.com/v1/models',
+        proxy: proxy,
+        headers: headers
+        },(err,response,body) => {
+            if (err){
+                console.error(err);
+                res.send(err).status(500)
+            }
+            console.log(body)
+            res.send(body).status(200)
+        })   
+
+});
+
 app.listen(PORT,() => console.log('server running on port ' + PORT))

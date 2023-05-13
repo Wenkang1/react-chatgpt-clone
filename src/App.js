@@ -1,35 +1,52 @@
 import { useState,useEffect } from "react"
+// import request from "request";
+import axios from 'axios';
+
+
 
 const App = () => {
 
   const [value, setValue] = useState(null)
   const [message, setMessage] = useState(null)
   const [previousChat, setPreviousChat] = useState([])
-  const [currentTitle, setCurrentTitle] = useState([])
+  const [currentTitle, setCurrentTitle] = useState(null)
+
+  const createNewChat = () => {
+    setMessage(null)
+    setValue('')
+    setCurrentTitle(null)
+
+  }
+
+  const handleClick = (uniqueTitle) => {
+    setCurrentTitle(uniqueTitle);
+  }
+
+  // console.log(previousChat)
 
   const getMessages = async () =>{
-    const options = {
-      method: "POST",
-      body: JSON.stringify({
-        message: value
-      }),
-      headers:{
+
+    axios.post('http://localhost:8001/completions', 
+      {
+        message : value
+      },
+      {
+        headers:{
         "Content-Type": "application/json"
-    },
+      }
+      }).then( (response) => {
+        // console.log('setMessage' + JSON.stringify(response.data.choices[0].message))
+        setMessage(response.data.choices[0].message)
+      }).catch( (error) => {
+        console.error(error.status + error)
+      })
       
     }
-    try {
-      const res = await fetch('http://localhost:8000/completions', options)
-      const data = await res.json()
-      console.log(data)
-      setMessage(data.choices[0].message)
-    } catch (error) {
-      console.error(error)
-    }
-  }
+
   useEffect(() => {
-    console.log(currentTitle, value, message)
+    // console.log(currentTitle, value, message)
     if (!currentTitle && value && message){
+      console.log('set title to ' + value)
       setCurrentTitle(value)
     }
     if (currentTitle && value && message){
@@ -37,7 +54,7 @@ const App = () => {
         [...prevChats,
           {
             title: currentTitle,
-            role:"user",
+            role:"you",
             cotent: value
         },
         {
@@ -48,18 +65,18 @@ const App = () => {
       ]
       ))
     }
+  }, [message,currentTitle] )
 
-  }, [message, currentTitle, value] )
-  console.log("previousChat: " ,previousChat)
-  console.log("input value: " ,value)
-  console.log("message we got back: " ,message)
 
+  const currenChat = previousChat.filter(previousChat => previousChat.title === currentTitle)
+  // console.log(previousChat)
+  const uniqueTitles = Array.from(new Set(previousChat.map(previousChat => previousChat.title)))
   return (
     <div className="App">
       <section className="side-bar">
-        <button>+ New Chat</button>
+        <button onClick={createNewChat}>+ New Chat</button>
         <ul className="history">
-          <li>yes</li>
+          {uniqueTitles?.map((uniqueTitle, index) => <li key={index} onClick={() => handleClick(uniqueTitle)}>{uniqueTitle}</li>)}
         </ul>
         <nav>
           <p>made by wenkang</p>
@@ -68,8 +85,12 @@ const App = () => {
       <section className="main">
         {!currentTitle && <h1>FanQiangGPT</h1>}
         <ul className="feed">
-
-
+          {currenChat?.map((chatMessage, index) => 
+          <li key={index}>
+            <p className="role">{chatMessage.role}</p>
+            <p>{chatMessage.content}</p>
+          </li>
+          )}
         </ul>
         <div className="bottom-section">
           <div className="input-container">
