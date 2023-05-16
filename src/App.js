@@ -1,15 +1,17 @@
 import { useState,useEffect } from "react"
 // import request from "request";
 import axios from 'axios';
-
+import { Avatar, List, Tag, Button, Menu } from 'antd';
+import { SendOutlined } from '@ant-design/icons';
 
 
 const App = () => {
 
   const [value, setValue] = useState(null)
   const [message, setMessage] = useState(null)
-  const [previousChat, setPreviousChat] = useState([])
+  const [previousChats, setPreviousChats] = useState([])
   const [currentTitle, setCurrentTitle] = useState(null)
+  const [loading, setLoading] = useState(false)
 
   const createNewChat = () => {
     setMessage(null)
@@ -19,13 +21,15 @@ const App = () => {
   }
 
   const handleClick = (uniqueTitle) => {
+    setMessage(null)
+    setValue('')
     setCurrentTitle(uniqueTitle);
   }
 
   // console.log(previousChat)
 
   const getMessages = async () =>{
-
+    setLoading(true)
     axios.post('http://localhost:8001/completions', 
       {
         message : value
@@ -37,8 +41,12 @@ const App = () => {
       }).then( (response) => {
         // console.log('setMessage' + JSON.stringify(response.data.choices[0].message))
         setMessage(response.data.choices[0].message)
+        setValue(value)
+        setLoading(false)
       }).catch( (error) => {
         console.error(error.status + error)
+        alert('Error, try later')
+        setLoading(false)
       })
       
     }
@@ -50,12 +58,12 @@ const App = () => {
       setCurrentTitle(value)
     }
     if (currentTitle && value && message){
-      setPreviousChat(prevChats => (
+      setPreviousChats(prevChats => (
         [...prevChats,
           {
             title: currentTitle,
             role:"you",
-            cotent: value
+            content: value
         },
         {
           title: currentTitle,
@@ -65,21 +73,29 @@ const App = () => {
       ]
       ))
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [message,currentTitle] )
 
-
-  const currenChat = previousChat.filter(previousChat => previousChat.title === currentTitle)
+  const currenChat = previousChats.filter(previousChat => previousChat.title === currentTitle)
   // console.log(previousChat)
-  const uniqueTitles = Array.from(new Set(previousChat.map(previousChat => previousChat.title)))
+  const uniqueTitles = Array.from(new Set(previousChats.map(previousChat => previousChat.title)))
+  // console.log(currenChat)
   return (
     <div className="App">
       <section className="side-bar">
-        <button onClick={createNewChat}>+ New Chat</button>
+      <Button ghost onClick={createNewChat}>+ New Chat</Button>
         <ul className="history">
-          {uniqueTitles?.map((uniqueTitle, index) => <li key={index} onClick={() => handleClick(uniqueTitle)}>{uniqueTitle}</li>)}
+          
+          {uniqueTitles?.map((uniqueTitle, index) => <li bordered={false} color="geekblue" key={index} onClick={() => handleClick(uniqueTitle)}>{uniqueTitle}</li>)}
         </ul>
         <nav>
-          <p>made by wenkang</p>
+          <List.Item.Meta
+            avatar={
+              <Avatar src={`https://xsgames.co/randomusers/avatar.php?g=pixel`} />
+            }
+            title={<a href="https://github.com/Wenkang1">{"made by Wenkang"}</a>}
+            description="A chatGPT clone with antd-UI"
+          />
         </nav>
       </section>
       <section className="main">
@@ -95,13 +111,9 @@ const App = () => {
         <div className="bottom-section">
           <div className="input-container">
             <input value={value} onChange={(e) => setValue(e.target.value)}/>
-            <div id="submit" onClick={getMessages}>SUBMIT</div>
+            <Button ghost id="submit" onClick={getMessages} loading={loading} icon={<SendOutlined />}>submit</Button>
           </div>
-          <p className="info">
-            here to store chatgpt info
-          </p>
         </div>
-
       </section>
     </div>
   );
